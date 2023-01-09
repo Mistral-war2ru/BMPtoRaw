@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Drawing;
@@ -9,6 +9,8 @@ namespace BMPtoRaw
 {
     public partial class Form1 : Form
     {
+        private static int mode = 0;
+
         public Form1()
         {
             InitializeComponent();
@@ -16,6 +18,13 @@ namespace BMPtoRaw
 
         private void button1_Click(object sender, EventArgs e)
         {
+            mode = 1;
+            openFileDialog1.ShowDialog();
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            mode = 2;
             openFileDialog1.ShowDialog();
         }
 
@@ -28,18 +37,30 @@ namespace BMPtoRaw
                 Bitmap bmp = new Bitmap(openFileDialog1.FileName);
                 if (bmp.Palette.Entries.Length == 256)
                 {
-                    FileInfo f = new FileInfo(nn + ".pal");
-                    if (f.Exists) f.Delete();
-                    FileStream fs = f.Create();
-                    foreach (Color c in bmp.Palette.Entries)
+                    if (mode == 1)
                     {
-                        byte[] ar = { c.R, c.G, c.B, 0 };
-                        fs.Write(ar, 0, 4);
+                        FileInfo f = new FileInfo(nn + ".pal");
+                        if (f.Exists) f.Delete();
+                        FileStream fs = f.Create();
+                        foreach (Color c in bmp.Palette.Entries)
+                        {
+                            byte[] ar = { c.R, c.G, c.B, 0 };
+                            fs.Write(ar, 0, 4);
+                        }
+                        fs.Close();
                     }
-                    fs.Close();
-                    FileInfo f2 = new FileInfo(nn + ".raw");
+                    FileInfo f2 = new FileInfo(nn + (mode == 1 ? ".raw" : "-ui.bmp"));
                     if (f2.Exists) f2.Delete();
                     FileStream fs2 = f2.Create();
+                    if (mode == 2)
+                    {
+                        byte[] pic_size = { 0, 0, 0, 0 };
+                        pic_size[0] = (byte)(bmp.Width % 256);
+                        pic_size[1] = (byte)(bmp.Width / 256);
+                        pic_size[2] = (byte)(bmp.Height % 256);
+                        pic_size[3] = (byte)(bmp.Height / 256);
+                        fs2.Write(pic_size, 0, 4);
+                    }
 
                     BitmapData data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
                         ImageLockMode.ReadOnly,
@@ -67,6 +88,7 @@ namespace BMPtoRaw
                     MessageBox.Show("Only 256 color bmp");
                 bmp.Dispose();
             }
+            mode = 0;
         }
     }
 }
